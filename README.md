@@ -16,7 +16,7 @@ Punchclock - What Is It?
 (from http://www.acmebase.org/punchclock/ ...)
 
 
-##Installation
+## Installation
 
 New Install
 ___
@@ -24,7 +24,7 @@ ___
 Use the install.php
 
 
-Migration from another verison of PHP-Timeclock
+## Migration from another verison of PHP-Timeclock
 ___
 
  -  Backup your current install directory and database.
