@@ -125,9 +125,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         user_modified VARCHAR(50) NOT NULL
     );
 
-    INSERT INTO offices (officeid, officename) VALUES (1, 'MainOffice') ON DUPLICATE KEY UPDATE officename = 'MainOffice';
+    INSERT INTO offices (officeid, officename) VALUES (1, 'Huvudkontoret') ON DUPLICATE KEY UPDATE officename = 'Huvudkontoret';
 
-    INSERT INTO groups (groupid, groupname, officeid) VALUES (1, 'Staff', 1) ON DUPLICATE KEY UPDATE groupname = 'Staff';
+    INSERT INTO groups (groupid, groupname, officeid) VALUES (1, 'Personal', 1) ON DUPLICATE KEY UPDATE groupname = 'Personal';
 
     INSERT INTO employees (empfullname, tstamp, employee_passwd, displayname, email, groups, office, admin, reports, timeadmin, disabled) 
     VALUES ('$adminUsername', UNIX_TIMESTAMP(), '" . crypt('1234', 'xy') . "', 'Administrator', '$adminEmail', 1, 1, 1, 1, 1, 0) 
