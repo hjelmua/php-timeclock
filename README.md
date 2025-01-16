@@ -31,6 +31,7 @@ ___
  -  Delete all files in your current install directory.
  -  Copy all files from a zip of this repo's master branch
  -  Modify the new `config.php` file in config to match your old settings, make sure you correctly set your timezone
+ -  use the upgrade.php
 
 
 ##Roles
