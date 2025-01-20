@@ -13,6 +13,7 @@ $defaultEndDate = date('Y-m-20');
 $startDate = isset($_POST['start_date']) ? $_POST['start_date'] : $defaultStartDate;
 $endDate = isset($_POST['end_date']) ? $_POST['end_date'] : $defaultEndDate;
 $selectedEmployee = isset($_POST['employee']) ? $_POST['employee'] : '';
+$applyBreaks = isset($_POST['apply_breaks']) ? true : false;
 
 // Validate dates
 if (!validateDate($startDate) || !validateDate($endDate) || $startDate > $endDate) {
@@ -27,56 +28,62 @@ if (!$employeesResult) {
 }
 $employees = $employeesResult->fetch_all(MYSQLI_ASSOC);
 
-// Fetch work hours for the selected date range and employee
-$workHoursQuery = "
-    WITH all_dates AS (
-        SELECT DATE_ADD(?, INTERVAL seq DAY) AS work_date
-        FROM (
-            SELECT 0 seq UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4
-            UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9
-            UNION SELECT 10 UNION SELECT 11 UNION SELECT 12 UNION SELECT 13 UNION SELECT 14
-            UNION SELECT 15 UNION SELECT 16 UNION SELECT 17 UNION SELECT 18 UNION SELECT 19
-            UNION SELECT 20 UNION SELECT 21 UNION SELECT 22 UNION SELECT 23 UNION SELECT 24
-            UNION SELECT 25 UNION SELECT 26 UNION SELECT 27 UNION SELECT 28 UNION SELECT 29
-            UNION SELECT 30 UNION SELECT 31
-        ) AS numbers
-        WHERE DATE_ADD(?, INTERVAL seq DAY) <= ?
-    )
-    SELECT d.work_date, e.displayname,
-           COALESCE(SUM(out_punch.timestamp - in_punch.timestamp) / 3600, 0) AS total_hours
-    FROM all_dates d
-    CROSS JOIN employees e
-    LEFT JOIN info in_punch
-        ON e.empfullname = in_punch.fullname
-        AND DATE(FROM_UNIXTIME(in_punch.timestamp)) = d.work_date
-        AND in_punch.`inout` = 'in'
-    LEFT JOIN info out_punch
-        ON e.empfullname = out_punch.fullname
-        AND DATE(FROM_UNIXTIME(out_punch.timestamp)) = d.work_date
-        AND out_punch.`inout` = 'out'
-        AND out_punch.timestamp > in_punch.timestamp
-    WHERE e.disabled = 0 AND e.admin = 0
-    AND (? = '' OR e.empfullname = ?)
-    GROUP BY d.work_date, e.displayname
-    ORDER BY d.work_date, e.displayname;
-";
+// Fetch all punches for selected employee and date range
+$punches = [];
+$workHours = [];
+$totalWorkedHours = 0;
+if ($selectedEmployee) {
+    $punchesQuery = "
+        SELECT DATE(FROM_UNIXTIME(timestamp)) AS work_date, TIME(FROM_UNIXTIME(timestamp)) AS punch_time, `inout`, timestamp
+        FROM info
+        WHERE LOWER(fullname) = LOWER(?) AND timestamp BETWEEN UNIX_TIMESTAMP(?) AND UNIX_TIMESTAMP(?)
+        ORDER BY timestamp ASC;
+    ";
 
-$stmt = $conn->prepare($workHoursQuery);
-if (!$stmt) {
-    die("Error preparing statement: " . $conn->error);
+    $stmt = $conn->prepare($punchesQuery);
+    if (!$stmt) {
+        die("Error preparing punches query: " . $conn->error);
+    }
+
+    $stmt->bind_param("sss", $selectedEmployee, $startDate, $endDate);
+    $stmt->execute();
+    $punchesResult = $stmt->get_result();
+    $punches = $punchesResult->fetch_all(MYSQLI_ASSOC);
+    
+    // Calculate total worked hours per day
+    $lastInTimestamp = null;
+    foreach ($punches as $punch) {
+        $date = $punch['work_date'];
+        $time = $punch['punch_time'];
+        $inout = $punch['inout'];
+        $timestamp = $punch['timestamp'];
+
+        if ($inout === 'in') {
+            $lastInTimestamp = $timestamp;
+        } elseif ($inout === 'out' && $lastInTimestamp) {
+            $workedSeconds = $timestamp - $lastInTimestamp;
+            
+            // Apply automatic breaks if enabled
+            if ($applyBreaks) {
+                if ($workedSeconds > 8 * 3600) {
+                    $workedSeconds -= 3600; // Deduct 1 hour for breaks - if more than 8 hours 
+                } elseif ($workedSeconds > 5 * 3600) {
+                    $workedSeconds -= 1800; // or deduct 30 minutes for break - if more than 5 hours 
+                }
+            }
+
+            $workHours[$date] = isset($workHours[$date]) ? $workHours[$date] + $workedSeconds : $workedSeconds;
+            $totalWorkedHours += $workedSeconds;
+            $lastInTimestamp = null; // Reset after OUT punch
+        }
+    }
 }
 
-$stmt->bind_param("sssss", $startDate, $startDate, $endDate, $selectedEmployee, $selectedEmployee);
-$stmt->execute();
-$workHoursResult = $stmt->get_result();
-if (!$workHoursResult) {
-    die("Error fetching work hours: " . $stmt->error);
+// Convert worked seconds to hours
+foreach ($workHours as $date => $seconds) {
+    $workHours[$date] = round($seconds / 3600, 2);
 }
-
-$workHours = $workHoursResult->fetch_all(MYSQLI_ASSOC);
-foreach ($workHours as &$row) {
-    $row['total_hours'] = round($row['total_hours'], 2);
-}
+$totalWorkedHours = round($totalWorkedHours / 3600, 2);
 
 function validateDate($date, $format = 'Y-m-d') {
     $d = DateTime::createFromFormat($format, $date);
@@ -88,55 +95,79 @@ function validateDate($date, $format = 'Y-m-d') {
 
 <!-- Report Selection Form -->
 <form method="POST" class="mb-4">
-    <div class="mb-3">
-        <label for="start_date">Start Date:</label>
-        <input type="date" id="start_date" name="start_date" value="<?= htmlspecialchars($startDate) ?>" class="form-control w-25 d-inline-block">
+<div class="mb-3">
+    <label for="employee">Select Employee:</label>
+    <select id="employee" name="employee" class="form-select w-25 d-inline-block">
+        <option value="">All Employees</option>
+        <?php foreach ($employees as $employee): ?>
+            <option value="<?= htmlspecialchars($employee['empfullname']) ?>" <?= ($selectedEmployee === $employee['empfullname']) ? 'selected' : '' ?>>
+                <?= htmlspecialchars($employee['displayname']) ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
+</div>
+ <div class="mb-3">
+    <label for="start_date">Start Date:</label>
+    <input type="date" id="start_date" name="start_date" value="<?= htmlspecialchars($startDate) ?>" class="form-control w-25 d-inline-block">
+    <label for="end_date">End Date:</label>
+    <input type="date" id="end_date" name="end_date" value="<?= htmlspecialchars($endDate) ?>" class="form-control w-25 d-inline-block">
     </div>
-    <div class="mb-3">
-        <label for="end_date">End Date:</label>
-        <input type="date" id="end_date" name="end_date" value="<?= htmlspecialchars($endDate) ?>" class="form-control w-25 d-inline-block">
-    </div>
-    <div class="mb-3">
-        <label for="employee">Select Employee:</label>
-        <select id="employee" name="employee" class="form-select w-25 d-inline-block">
-            <option value="">All Employees</option>
-            <?php foreach ($employees as $employee): ?>
-                <option value="<?= htmlspecialchars($employee['empfullname']) ?>" <?= ($selectedEmployee === $employee['empfullname']) ? 'selected' : '' ?>>
-                    <?= htmlspecialchars($employee['displayname']) ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
-    </div>
+<div class="mb-3">
+        <input type="checkbox" id="apply_breaks" name="apply_breaks" <?= $applyBreaks ? 'checked' : '' ?>>
+        <label for="apply_breaks">Apply Automatic Breaks</label>
+</div>
+<div class="mb-3">
     <button type="submit" class="btn btn-primary">Generate Report</button>
 </form>
+</div>
 
-<!-- Report Table -->
+<h2>Daily Work Hours</h2>
 <table class="table table-striped">
     <thead>
         <tr>
             <th>Date</th>
-            <th>Employee</th>
-            <th>Worked Hours</th>
+            <th>Total Worked Hours</th>
         </tr>
     </thead>
     <tbody>
-    <?php foreach ($workHours as $row): ?>
-        <tr class="<?= (floatval($row['total_hours']) <= 0.01) ? 'missing-day' : '' ?>">
-            <td><?= htmlspecialchars($row['work_date']) ?></td>
-            <td><?= htmlspecialchars($row['displayname']) ?></td>
-            <td>
-                <?= htmlspecialchars($row['total_hours']) ?> hours
-                <?= (floatval($row['total_hours']) <= 0.01) ? '<i class="bi bi-exclamation-triangle-fill text-danger"></i>' : '' ?>
-            </td>
+        <?php foreach ($workHours as $date => $hours): ?>
+            <tr>
+                <td><?= htmlspecialchars($date) ?></td>
+                <td><?= htmlspecialchars($hours) ?> hours</td>
+            </tr>
+        <?php endforeach; ?>
+        <tr>
+            <td><strong>Total Worked Hours</strong></td>
+            <td><strong><?= htmlspecialchars($totalWorkedHours) ?> hours</strong></td>
         </tr>
-    <?php endforeach; ?>
     </tbody>
 </table>
 
-<!-- Export to CSV Button -->
-<form method="POST" action="export_report.php">
-    <input type="hidden" name="start_date" value="<?= htmlspecialchars($startDate) ?>">
-    <input type="hidden" name="end_date" value="<?= htmlspecialchars($endDate) ?>">
-    <input type="hidden" name="employee" value="<?= htmlspecialchars($selectedEmployee) ?>">
-    <button type="submit" class="btn btn-success">Export to CSV</button>
-</form>
+<!-- Toggle Button for Punch Records -->
+<button class="btn btn-secondary" onclick="togglePunches()">Show/Hide Punch Records</button>
+
+<script>
+function togglePunches() {
+    var table = document.getElementById("punchesTable");
+    table.style.display = (table.style.display === "none") ? "table" : "none";
+}
+</script>
+
+<table id="punchesTable" class="table table-bordered" style="display:none;">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Time</th>
+            <th>IN/OUT</th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php foreach ($punches as $punch): ?>
+            <tr>
+                <td><?= htmlspecialchars($punch['work_date']) ?></td>
+                <td><?= htmlspecialchars($punch['punch_time']) ?></td>
+                <td><?= htmlspecialchars($punch['inout']) ?></td>
+            </tr>
+        <?php endforeach; ?>
+    </tbody>
+</table>
