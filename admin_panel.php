@@ -38,7 +38,8 @@ if ($conn->connect_error) {
     <!-- Admin Menu -->
     <div class="list-group mb-4">
         <a href="?page=dashboard" class="list-group-item list-group-item-action">📊 Dashboard</a>
-        <a href="?page=fix_punches" class="list-group-item list-group-item-action">🔧 Fix Missing Punches</a>
+        <a href="?page=fix_punches" class="list-group-item list-group-item-action">🔧 Fix Missing daily Punches</a>
+        <a href="?page=edit_punches" class="list-group-item list-group-item-action">🔧 Edit Punches</a>
         <a href="?page=manage_users" class="list-group-item list-group-item-action">👥 Manage Employees</a>
         <a href="?page=add_employee" class="list-group-item list-group-item-action">➕ Add Employee</a>
         <a href="?page=report" class="list-group-item list-group-item-action">📊 Generate Reports</a>
@@ -49,7 +50,7 @@ if ($conn->connect_error) {
     <div class="content">
         <?php
         $page = isset($_GET['page']) ? $_GET['page'] : 'dashboard';
-        $allowed_pages = ['dashboard', 'fix_punches', 'manage_users', 'report', 'add_employee', 'edit_employee'];
+        $allowed_pages = ['dashboard', 'fix_punches', 'edit_punches', 'edit_punch', 'manage_users', 'report', 'add_employee', 'edit_employee'];
 
         // Ensure only allowed pages are included to prevent security risks
         if (in_array($page, $allowed_pages)) {
