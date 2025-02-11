@@ -3,6 +3,9 @@ About
 
 Initally a fork of timeclock version 1.10 that uses bootstrap.
 
+<img width="1341" alt="screen2" src="https://github.com/user-attachments/assets/acad476d-5958-4225-bd8e-069f73bfaa05" />
+
+
 
 Timeclock - What Is It?
 =======================
