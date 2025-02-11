@@ -57,3 +57,6 @@ Digital stämplelklocka i PHP och Bootstrap
 
 ##Screenshots
 ________
+
+<img width="1341" alt="Skärmavbild 2025-02-11 kl  22 48 30" src="https://github.com/user-attachments/assets/09a1cf85-11fa-4366-8b28-9907b773cc6e" />
+
