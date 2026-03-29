@@ -37,10 +37,6 @@ Fyll i DB-uppgifter och timezone i `config/config.php`.
 | `timeclock.php` | Stämpling för personal |
 | `admin_login.php` | Admin-inloggning |
 
-## Deploy till produktion
-
-Se [docs/deploy.md](docs/deploy.md) för instruktioner.
-
 ## Krav
 
 - PHP med MySQLi
