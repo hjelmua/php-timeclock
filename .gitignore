@@ -1,0 +1,5 @@
+# Privat konfiguration med DB-uppgifter
+config/config.php
+
+# Loggfiler
+*.log
