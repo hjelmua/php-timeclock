@@ -52,7 +52,11 @@ $punches = $punchesResult->fetch_all(MYSQLI_ASSOC);
                 <td><?= htmlspecialchars($punch['inout']) ?></td>
                 <td>
                     <a href="admin_edit_punch.php?id=<?= urlencode($punch['id']) ?>" class="btn btn-warning btn-sm">Edit</a>
-                    <a href="admin_delete_punch.php?id=<?= urlencode($punch['id']) ?>" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure?');">Delete</a>
+                    <form method="POST" action="fix_punches.php" style="display:inline;" onsubmit="return confirm('Are you sure?');">
+                        <input type="hidden" name="employee" value="<?= htmlspecialchars($punch['fullname']) ?>">
+                        <input type="hidden" name="punch_id" value="<?= urlencode($punch['id']) ?>">
+                        <button type="submit" name="delete_punch" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
                 </td>
             </tr>
         <?php endforeach; ?>

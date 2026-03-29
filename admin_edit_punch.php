@@ -56,7 +56,7 @@ include 'admin_htmlheader.php';
     </select>
     
     <button type="submit" class="btn btn-primary mt-3">Update Punch</button>
-    <a href="admin_edit_punches.php" class="btn btn-secondary mt-3">Cancel</a>
+    <a href="admin_panel.php?page=edit_punches" class="btn btn-secondary mt-3">Cancel</a>
 </form>
 
 <?php include 'admin_footer.php'; ?>

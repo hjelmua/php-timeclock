@@ -48,7 +48,7 @@ if (!$conn) {
                 <td><?= htmlspecialchars($row['inout'] ?? 'No Data') ?></td>
                 <td>
                     <?php if ($row['inout'] === 'in'): ?>
-                        <a href="fix_punch.php?employee=<?= urlencode($row['displayname']) ?>" class="btn btn-warning btn-sm">Fix</a>
+                        <a href="fix_punches.php?employee=<?= urlencode($row['displayname']) ?>" class="btn btn-warning btn-sm">Fix</a>
                     <?php else: ?>
                         <span class="text-success">No Fix Needed</span>
                     <?php endif; ?>
