@@ -4,5 +4,6 @@ config/config.php
 # Loggfiler
 *.log
 
-# Lokal deploy-dokumentation (serverspecifik info)
+# Lokal dokumentation (ej för publik repo)
 docs/deploy.md
+docs/superpowers/
